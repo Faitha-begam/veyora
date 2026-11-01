@@ -1,9 +1,9 @@
 
 const Register = () => {
   return (
-   <>
-   Register 
-   </>
+    <>
+    Register
+    </>
   )
 }
 
