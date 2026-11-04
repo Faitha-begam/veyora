@@ -1,9 +1,10 @@
-import Navbar from "./components/Navbar"
+import React from 'react'
+import SearchBar from './womenSafety/SearchBar'
 
 const App = () => {
   return (
     <>
-    <Navbar/>
+    <SearchBar/>
     </>
   )
 }
