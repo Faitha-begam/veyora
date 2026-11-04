@@ -1,4 +1,4 @@
-function Navbar() {
+const Navbar = () => {
   return (
     <nav style={{
       display: "flex",
@@ -31,6 +31,6 @@ function Navbar() {
 
     </nav>
   );
-}
+};
 
 export default Navbar;
