@@ -1,4 +1,3 @@
-import SafePlaceCard from "./SafePlaceCard";
 
 const CardsDesign = ({place}) => {
   return (
