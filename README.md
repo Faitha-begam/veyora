@@ -1,1 +1,0 @@
-# Veyora - Intelligent Mobility Platform 
