@@ -1,10 +1,9 @@
-import React from 'react'
-import SearchBar from './womenSafety/SearchBar'
+import FindTransport from './pages/FindTransport'
 
 const App = () => {
   return (
     <>
-    <SearchBar/>
+    <FindTransport/>
     </>
   )
 }
