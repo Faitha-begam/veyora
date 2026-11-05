@@ -57,8 +57,6 @@ const transportData = [
     endTime: "23:30",
     fare: 500,
   },
-    fare: 350
-  },
    {
     id: 4,
     from: "Madurai",
