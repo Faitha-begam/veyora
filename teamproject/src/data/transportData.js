@@ -57,6 +57,17 @@ const transportData = [
     endTime: "23:30",
     fare: 500,
   },
+    fare: 350
+  },
+   {
+    id: 4,
+    from: "Madurai",
+    to: "Coimbatore",
+    type: "Train",
+    startTime: "22:30",
+    endTime: "05:30",
+    fare: 250
+  }
 ];
 
 export default transportData;

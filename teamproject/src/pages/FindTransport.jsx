@@ -2,6 +2,168 @@
 import { useState } from "react";
 import transportData from "../data/transportData";
 
+const toMinutes = (time) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+
+// Checks whether the selected time falls within the transport's time window
+const isTimeAvailable = (item, travelTime) => {
+  const userTime = toMinutes(travelTime);
+  const start = toMinutes(item.startTime);
+  const end = toMinutes(item.endTime);
+
+  if (start <= end) {
+    return userTime >= start && userTime <= end;
+  }
+
+  // Handles journeys that continue after midnight
+  return userTime >= start || userTime <= end;
+};
+
+// Calculates the journey duration in minutes
+const getDuration = (item) => {
+  const start = toMinutes(item.startTime);
+  const end = toMinutes(item.endTime);
+
+  return end >= start ? end - start : end + 1440 - start;
+};
+
+// Finds alternative routes using Breadth-First Search
+const findAlternativeRoutes = (from, to, travelTime) => {
+  const userTime = toMinutes(travelTime);
+
+  const queue = [];
+  const alternativeRoutes = [];
+
+  const maxLegs = 3;
+  const minTransferTime = 15;
+  const maxWaitingTime = 180;
+
+  // Start the search from the user's selected location
+  queue.push({
+    currentLocation: from,
+    path: [],
+    visited: new Set([from.toLowerCase()]),
+    arrivalTime: userTime,
+  });
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    // Stop searching if the route has reached the maximum number of legs
+    if (current.path.length >= maxLegs) {
+      continue;
+    }
+
+    const connections = transportData.filter(
+      (item) =>
+        item.from.toLowerCase() ===
+        current.currentLocation.toLowerCase()
+    );
+
+    for (const item of connections) {
+      const nextLocation = item.to;
+      const nextLocationKey = nextLocation.toLowerCase();
+
+      // Avoid visiting the same location again
+      if (current.visited.has(nextLocationKey)) {
+        continue;
+      }
+
+      let departureTime;
+
+      if (current.path.length === 0) {
+        // First transport must match the user's selected time
+        if (!isTimeAvailable(item, travelTime)) {
+          continue;
+        }
+
+        departureTime = current.arrivalTime;
+
+        const start = toMinutes(item.startTime);
+        const end = toMinutes(item.endTime);
+
+        // Adjust the arrival time for overnight journeys
+        let arrivalTime = end;
+
+        if (start > end && userTime > end) {
+          arrivalTime += 1440;
+        }
+
+        const newPath = [...current.path, item];
+
+        // Destination reached
+        if (nextLocationKey === to.toLowerCase()) {
+          continue;
+        }
+
+        const newVisited = new Set(current.visited);
+        newVisited.add(nextLocationKey);
+
+        queue.push({
+          currentLocation: nextLocation,
+          path: newPath,
+          visited: newVisited,
+          arrivalTime,
+        });
+
+        continue;
+      }
+
+      // Find the next available departure after reaching the current location
+      departureTime = toMinutes(item.startTime);
+
+      while (
+        departureTime <
+        current.arrivalTime + minTransferTime
+      ) {
+        departureTime += 1440;
+      }
+
+      const waitingTime = departureTime - current.arrivalTime;
+
+      // Do not allow transfers with more than 3 hours of waiting
+      if (waitingTime > maxWaitingTime) {
+        continue;
+      }
+
+      const arrivalTime = departureTime + getDuration(item);
+      const newPath = [...current.path, item];
+
+      // If the destination is reached, save the route
+      if (nextLocationKey === to.toLowerCase()) {
+        const totalFare = newPath.reduce(
+          (total, transport) => total + Number(transport.fare),
+          0
+        );
+
+        alternativeRoutes.push({
+          path: newPath,
+          totalFare,
+        });
+
+        continue;
+      }
+
+      const newVisited = new Set(current.visited);
+      newVisited.add(nextLocationKey);
+
+      queue.push({
+        currentLocation: nextLocation,
+        path: newPath,
+        visited: newVisited,
+        arrivalTime,
+      });
+    }
+  }
+
+  // Show cheaper alternative routes first
+  return alternativeRoutes.sort(
+    (a, b) => a.totalFare - b.totalFare
+  );
+};
+
 const FindTransport = () => {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -9,150 +171,68 @@ const FindTransport = () => {
   const [travelTime, setTravelTime] = useState("");
 
   const [results, setResults] = useState([]);
-  const [alternatives, setAlternatives] = useState([]);
+  const [alternativeRoutes, setAlternativeRoutes] = useState([]);
+
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Convert time into minutes
-  const convertTime = (time) => {
-    const [hours, minutes] = time.split(":");
-    return Number(hours) * 60 + Number(minutes);
-  };
-
-  // Check whether a service is running at the selected time
-  const isTimeAvailable = (startTime, endTime, userTime) => {
-    const start = convertTime(startTime);
-    const end = convertTime(endTime);
-
-    if (start <= end) {
-      return userTime >= start && userTime <= end;
-    }
-
-    return userTime >= start || userTime <= end;
-  };
-
-  // Find connecting alternative routes
-  const findAlternativeRoutes = () => {
-    const alternatives = [];
-    const userTime = convertTime(travelTime);
-
-    const firstRoutes = transportData.filter((item) => {
-      return (
-        item.from.toLowerCase() === from.trim().toLowerCase() &&
-        isTimeAvailable(item.startTime, item.endTime, userTime)
-      );
-    });
-
-    firstRoutes.forEach((first) => {
-      if (first.to.toLowerCase() === to.trim().toLowerCase()) {
-        return;
-      }
-
-      const secondRoutes = transportData.filter((item) => {
-        if (
-          item.from.toLowerCase() !== first.to.toLowerCase() ||
-          item.to.toLowerCase() !== to.trim().toLowerCase()
-        ) {
-          return false;
-        }
-
-        const firstArrival = convertTime(first.endTime);
-        let secondDeparture = convertTime(item.startTime);
-
-        // Handle travel continuing after midnight
-        if (secondDeparture < convertTime(first.startTime)) {
-          secondDeparture += 1440;
-        }
-
-        let arrival = firstArrival;
-
-        if (arrival < convertTime(first.startTime)) {
-          arrival += 1440;
-        }
-
-        // Require at least 15 minutes for a connection
-        return (
-          secondDeparture >= arrival + 15 &&
-          secondDeparture <= arrival + 180
-        );
-      });
-
-      secondRoutes.forEach((second) => {
-        alternatives.push({
-          id: `${first.id}-${second.id}`,
-          via: first.to,
-          first,
-          second,
-          totalFare: first.fare + second.fare,
-        });
-      });
-    });
-
-    return alternatives;
-  };
-
-  // Search transport
   const handleSearch = () => {
-    if (!from.trim() || !to.trim() || !travelDate || !travelTime) {
+    if (
+      !from.trim() ||
+      !to.trim() ||
+      !travelDate ||
+      !travelTime
+    ) {
       alert("Please fill all the fields");
       return;
     }
 
     if (from.trim().toLowerCase() === to.trim().toLowerCase()) {
-      alert("Starting location and destination cannot be the same");
+      alert("Starting point and destination cannot be the same");
       return;
     }
 
-    const userTime = convertTime(travelTime);
-
-    const directResults = transportData.filter((item) => {
-      const matchesRoute =
+    // Find direct transport options
+    const directResults = transportData.filter(
+      (item) =>
         item.from.toLowerCase() === from.trim().toLowerCase() &&
-        item.to.toLowerCase() === to.trim().toLowerCase();
+        item.to.toLowerCase() === to.trim().toLowerCase() &&
+        isTimeAvailable(item, travelTime)
+    );
 
-      const matchesTime = isTimeAvailable(
-        item.startTime,
-        item.endTime,
-        userTime
-      );
-
-      return matchesRoute && matchesTime;
-    });
+    // Find routes that need more than one transport
+    const alternativeResults = findAlternativeRoutes(
+      from.trim(),
+      to.trim(),
+      travelTime
+    );
 
     setResults(directResults);
-
-    if (directResults.length === 0) {
-      setAlternatives(findAlternativeRoutes());
-    } else {
-      setAlternatives([]);
-    }
-
+    setAlternativeRoutes(alternativeResults);
     setHasSearched(true);
   };
 
-  // Reset search
   const handleReset = () => {
     setFrom("");
     setTo("");
     setTravelDate("");
     setTravelTime("");
+
     setResults([]);
-    setAlternatives([]);
+    setAlternativeRoutes([]);
     setHasSearched(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-10">
-      <div className="mx-auto max-w-5xl">
+    <div className="min-h-screen bg-slate-50 px-4 py-10">
+      <div className="mx-auto max-w-4xl">
 
-        {/* Heading */}
-        <div className="mb-8">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-[#142B45]">
-            Find Alternative Transport
+            Find Your Transport
           </h1>
 
-          <p className="mt-2 text-slate-600">
-            No transport available? Find another way to reach
-            your destination safely.
+          <p className="mt-2 text-gray-500">
+            Find available transport and alternative routes for your journey.
           </p>
         </div>
 
@@ -162,8 +242,8 @@ const FindTransport = () => {
           <div className="grid gap-5 md:grid-cols-2">
 
             <div>
-              <label className="mb-2 block font-medium text-[#142B45]">
-                Starting Location
+              <label className="mb-2 block font-medium text-gray-700">
+                Starting Point
               </label>
 
               <input
@@ -171,12 +251,12 @@ const FindTransport = () => {
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 placeholder="Enter starting location"
-                className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-blue-600"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="mb-2 block font-medium text-[#142B45]">
+              <label className="mb-2 block font-medium text-gray-700">
                 Destination
               </label>
 
@@ -185,12 +265,12 @@ const FindTransport = () => {
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="Enter destination"
-                className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-blue-600"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="mb-2 block font-medium text-[#142B45]">
+              <label className="mb-2 block font-medium text-gray-700">
                 Travel Date
               </label>
 
@@ -198,12 +278,12 @@ const FindTransport = () => {
                 type="date"
                 value={travelDate}
                 onChange={(e) => setTravelDate(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-blue-600"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="mb-2 block font-medium text-[#142B45]">
+              <label className="mb-2 block font-medium text-gray-700">
                 Travel Time
               </label>
 
@@ -211,24 +291,24 @@ const FindTransport = () => {
                 type="time"
                 value={travelTime}
                 onChange={(e) => setTravelTime(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 p-3 outline-none focus:border-blue-600"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
               />
             </div>
 
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-wrap gap-3">
 
             <button
               onClick={handleSearch}
-              className="flex-1 rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+              className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
             >
               Search Transport
             </button>
 
             <button
               onClick={handleReset}
-              className="rounded-lg border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-100"
+              className="rounded-lg border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-100"
             >
               Reset
             </button>
@@ -236,182 +316,165 @@ const FindTransport = () => {
           </div>
         </div>
 
-        {/* Results */}
+        {/* Search Results */}
         {hasSearched && (
           <div className="mt-8">
 
-            {/* Journey Details */}
-            <div className="mb-6 rounded-xl bg-white p-5 shadow-sm">
-              <h2 className="text-xl font-bold text-[#142B45]">
-                Your Journey
+            <div className="mb-5 rounded-xl bg-white p-5 shadow-sm">
+              <h2 className="mb-3 text-xl font-bold text-[#142B45]">
+                Journey Details
               </h2>
 
-              <p className="mt-3 text-slate-600">
-                📍 {from} → {to}
-              </p>
+              <div className="grid gap-3 text-gray-600 sm:grid-cols-2">
+                <p>
+                  <span className="font-semibold">From:</span> {from}
+                </p>
 
-              <p className="mt-2 text-slate-600">
-                📅 {travelDate}
-              </p>
+                <p>
+                  <span className="font-semibold">To:</span> {to}
+                </p>
 
-              <p className="mt-2 text-slate-600">
-                🕒 {travelTime}
-              </p>
+                <p>
+                  <span className="font-semibold">Date:</span> {travelDate}
+                </p>
+
+                <p>
+                  <span className="font-semibold">Time:</span> {travelTime}
+                </p>
+              </div>
             </div>
 
             {/* Direct Transport */}
-            {results.length > 0 ? (
-              <div>
-                <h2 className="mb-4 text-2xl font-bold text-green-700">
-                  Available Transport
-                </h2>
+            <section className="mb-8">
 
+              <h2 className="mb-4 text-xl font-bold text-[#142B45]">
+                Direct Transport
+              </h2>
+
+              {results.length > 0 ? (
                 <div className="grid gap-4">
 
                   {results.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-xl border border-green-200 bg-white p-5 shadow-md"
+                      className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
                     >
-                      <h3 className="text-xl font-bold text-[#142B45]">
-                        {item.type}
-                      </h3>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
 
-                      <p className="mt-2 text-slate-600">
-                        {item.from} → {item.to}
-                      </p>
+                        <h3 className="text-lg font-bold text-blue-700">
+                          {item.type}
+                        </h3>
 
-                      <p className="mt-2 text-slate-600">
-                        Departure: {item.startTime}
-                      </p>
+                        <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+                          Direct Route
+                        </span>
 
-                      <p className="text-slate-600">
-                        Arrival: {item.endTime}
-                      </p>
+                      </div>
 
-                      <p className="mt-3 font-bold text-blue-600">
+                      <div className="mt-4 grid gap-3 text-gray-600 sm:grid-cols-2">
+
+                        <p>
+                          <span className="font-semibold">From:</span>{" "}
+                          {item.from}
+                        </p>
+
+                        <p>
+                          <span className="font-semibold">To:</span>{" "}
+                          {item.to}
+                        </p>
+
+                        <p>
+                          <span className="font-semibold">Start:</span>{" "}
+                          {item.startTime}
+                        </p>
+
+                        <p>
+                          <span className="font-semibold">End:</span>{" "}
+                          {item.endTime}
+                        </p>
+
+                      </div>
+
+                      <p className="mt-4 font-bold text-[#142B45]">
                         Fare: ₹{item.fare}
                       </p>
                     </div>
                   ))}
 
                 </div>
-              </div>
-            ) : (
-
-              /* No Direct Transport */
-              <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-
-                <h2 className="text-2xl font-bold text-red-600">
-                  No Direct Transport Available!
-                </h2>
-
-                <p className="mt-2 text-slate-700">
-                  Don't worry! We are checking alternative routes
-                  for your journey.
+              ) : (
+                <p className="rounded-lg bg-orange-50 p-4 text-orange-700">
+                  No direct transport found for this journey.
                 </p>
+              )}
 
-              </div>
-            )}
+            </section>
 
             {/* Alternative Routes */}
-            {results.length === 0 && (
-              <div className="mt-8">
+            <section>
 
-                <h2 className="mb-5 text-2xl font-bold text-[#142B45]">
-                  Alternative Travel Suggestions
-                </h2>
+              <h2 className="mb-4 text-xl font-bold text-[#142B45]">
+                Alternative Routes
+              </h2>
 
-                {alternatives.length > 0 ? (
-                  <div className="grid gap-5">
+              {alternativeRoutes.length > 0 ? (
+                <div className="grid gap-4">
 
-                    {alternatives.map((route) => (
-                      <div
-                        key={route.id}
-                        className="rounded-xl border bg-white p-5 shadow-md"
-                      >
+                  {alternativeRoutes.map((route, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                    >
+                      <h3 className="mb-4 font-bold text-blue-700">
+                        Alternative Route {index + 1}
+                      </h3>
 
-                        <h3 className="text-xl font-bold text-blue-700">
-                          Alternative Route Found
-                        </h3>
+                      <div className="space-y-4">
 
-                        <div className="mt-4 flex flex-wrap items-center gap-3 font-semibold">
-                          <span>{from}</span>
-                          <span>→</span>
-                          <span>{route.via}</span>
-                          <span>→</span>
-                          <span>{to}</span>
-                        </div>
-
-                        <div className="mt-5 space-y-3">
-
-                          <div className="rounded-lg bg-blue-50 p-4">
-                            <h4 className="font-bold">
-                              {route.first.type}
-                            </h4>
-
-                            <p>
-                              {route.first.from} → {route.first.to}
+                        {route.path.map((item, legIndex) => (
+                          <div
+                            key={item.id}
+                            className="rounded-lg bg-slate-50 p-4"
+                          >
+                            <p className="mb-2 text-sm font-semibold text-gray-500">
+                              {legIndex === 0
+                                ? "First Transport"
+                                : `Transfer ${legIndex}`}
                             </p>
 
-                            <p className="text-sm text-slate-600">
-                              {route.first.startTime} - {route.first.endTime}
+                            <p className="font-semibold text-[#142B45]">
+                              {item.from} → {item.to}
                             </p>
 
-                            <p className="mt-2 font-semibold">
-                              Fare: ₹{route.first.fare}
+                            <p className="mt-1 text-gray-600">
+                              {item.type} | {item.startTime} - {item.endTime}
+                            </p>
+
+                            <p className="mt-1 text-gray-600">
+                              Fare: ₹{item.fare}
                             </p>
                           </div>
-
-                          <div className="rounded-lg bg-blue-50 p-4">
-                            <h4 className="font-bold">
-                              {route.second.type}
-                            </h4>
-
-                            <p>
-                              {route.second.from} → {route.second.to}
-                            </p>
-
-                            <p className="text-sm text-slate-600">
-                              {route.second.startTime} - {route.second.endTime}
-                            </p>
-
-                            <p className="mt-2 font-semibold">
-                              Fare: ₹{route.second.fare}
-                            </p>
-                          </div>
-
-                        </div>
-
-                        <p className="mt-5 font-bold text-green-700">
-                          Total Estimated Fare: ₹{route.totalFare}
-                        </p>
-
-                        <p className="mt-2 text-xs text-slate-500">
-                          Sample route. Verify service timings before travel.
-                        </p>
+                        ))}
 
                       </div>
-                    ))}
 
-                  </div>
-                ) : (
+                      <div className="mt-4 border-t border-gray-200 pt-4">
+                        <p className="font-bold text-[#142B45]">
+                          Total Fare: ₹{route.totalFare}
+                        </p>
+                      </div>
 
-                  <div className="rounded-xl bg-yellow-50 p-5">
-                    <h3 className="font-bold text-yellow-800">
-                      No Connecting Route Found
-                    </h3>
+                    </div>
+                  ))}
 
-                    <p className="mt-2 text-slate-600">
-                      Try another travel time or check local taxi
-                      and auto services.
-                    </p>
-                  </div>
+                </div>
+              ) : (
+                <p className="rounded-lg bg-gray-100 p-4 text-gray-600">
+                  No alternative routes found for this journey.
+                </p>
+              )}
 
-                )}
-
-              </div>
-            )}
+            </section>
 
           </div>
         )}
