@@ -25,6 +25,15 @@ const transportData = [
     startTime: "21:00",
     endTime: "06:00",
     fare: 350
+  },
+   {
+    id: 4,
+    from: "Madurai",
+    to: "Coimbatore",
+    type: "Train",
+    startTime: "22:30",
+    endTime: "05:30",
+    fare: 250
   }
 ];
 
