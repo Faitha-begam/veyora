@@ -1,6 +1,5 @@
-import React from 'react'
 import SearchBar from './womenSafety/SearchBar'
-
+import  "./App.css"
 const App = () => {
   return (
     <>
