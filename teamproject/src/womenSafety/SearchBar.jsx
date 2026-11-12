@@ -1,8 +1,10 @@
 import { useState } from "react"
 import safePlacesByArea from "./SafePlaces"
+import CardsDesign from "./CardsDesign";
 const SearchBar = () => {
-    const[search,setSearch]=useState("")
+        const[search,setSearch]=useState("")
         const[searched,setSearched]=useState(false)
+        const [safetyFilter, setSafetyFilter] = useState("All");
 
     const[places,setPlaces]=useState([])
     const handleSearch=(e)=>{
@@ -21,44 +23,84 @@ const SearchBar = () => {
   }
 
     }
+    const handleSafetyFilter = (level) => {
+    setSafetyFilter(level);
+};
+    const filteredPlaces = safetyFilter==="All"
+    ? places:places.filter((place) => place.safety === safetyFilter)
+    
      
     
   return (
     <>
-    <label htmlFor="location">Search Location: </label>
+    <div className="search-section">
 
-<select
-  id="location"
-  value={search}
-  onChange={handleSearch}
->
-  <option value="">Select an Area </option>
+  <label htmlFor="location">
+    Search Location:
+  </label>
 
-  <option value="Ashok Pillar">Ashok Pillar</option>
-
-  <option value="Anna Nagar">Anna Nagar</option>
-
-  <option value="Koyambedu">Koyambedu</option>
-
-  <option value="Guindy">Guindy</option>
-</select>
-    <button onClick={handleFindPlaces}>Find Safe Places</button>
+  <select
+  className="location-select"
+    id="location"
+    value={search}
+    onChange={handleSearch}
+  >
+    <option value="">Select an Area</option>
+    <option value="Ashok Pillar">Ashok Pillar</option>
+    <option value="Anna Nagar">Anna Nagar</option>
+    <option value="Koyambedu">Koyambedu</option>
+    <option value="Guindy">Guindy</option>
+  </select>
+   
+    <button className="btn" onClick={handleFindPlaces}>Find Safe Places</button>
      { searched && places.length === 0 && search !== "" && (
   <p>No safe waiting places found for "{search}".</p>
 )}
-    {places.map((e)=>(
-        <div key={e.id}>
-            <h3>Name: {e.name}</h3>
-            <h3>Category: {e.category}</h3>
-            <h3>Safety: {e.safety}</h3>
-            <h3>Distance: {e.distance}</h3>
-            <h3>Status: {e.status   }</h3>
-            <h3>rating: {e.rating}</h3>
-            <h3>reason: {e.reason}</h3>
-           
+</div>
+ <div className="safety-filter">
+
+
+<p className="selected-filter">
+  Selected Filter: {safetyFilter}
+</p>
+
+<button className={safetyFilter === "All" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("All")}
+>
+All
+</button>
+
+
+<button  className={safetyFilter === "High" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("High")}
+>
+High Safety
+</button>
+
+
+<button className={safetyFilter === "Medium" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("Medium")}
+>
+Medium Safety
+</button>
+
+
+<button  className={safetyFilter === "Public" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("Public")}
+>
+Public Places
+</button>
+
+</div>
+  <div className="cards-container">
+  {filteredPlaces.map((place)=>(
+    <CardsDesign
+        key={place.id}
+        place={place}
+    />
+  ))}
+</div>
   
-        </div>
-    ))}
     
     </>
   )

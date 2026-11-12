@@ -1,14 +1,5 @@
-
-import { Routes, Route, useLocation } from 'react-router-dom'
-import Navbar from './components/Navbar'
-import Home from './pages/Home'
-import FindTransport from './pages/FindTransport'
-import SafePlaces from './pages/SafePlaces'
-import SharedRide from './pages/SharedRide'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Header from './Sharedrideoption/Header'
-
+import SearchBar from './womenSafety/SearchBar'
+import  "./App.css"
 const App = () => {
   const location = useLocation()
 
