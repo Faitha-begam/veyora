@@ -70,3 +70,4 @@ const handleDirections = () => {
 }
 
 export default CardsDesign
+  
