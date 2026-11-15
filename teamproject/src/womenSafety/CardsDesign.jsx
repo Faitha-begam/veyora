@@ -6,7 +6,13 @@ const CardsDesign = ({place}) => {
     setShowReason(!showReason);
 };
 const handleDirections = () => {
-    alert("Directions feature will be available soon");
+
+  const location = place.name;
+
+  const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}`;
+
+  window.open(mapUrl, "_blank");
+
 };
   return (
  

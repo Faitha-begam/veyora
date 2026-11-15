@@ -23,6 +23,7 @@ body{
     width:320px;
     padding:25px;
     border-radius:16px;
+    border-left: 6px solid #142B45;
     box-shadow:0 4px 12px rgba(0,0,0,0.1);
     line-height: 1.6;
      margin: 12px 0;
@@ -170,4 +171,55 @@ body{
 
 .direction-btn {
     background-color: #2563EB;
+}
+.safe-page {
+    padding: 0 40px;
+}
+.welcome-card {
+    background-color: #FFFFFF;
+    padding: 25px;
+    margin-top: 30px;
+    margin-left: 80px;
+    margin-right: 80px;
+    margin-bottom: 30px;
+    border: 2px solid #142B45;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.welcome-card h2 {
+    color: #142B45;
+    margin-bottom: 15px;
+}
+
+.welcome-text {
+    color: #475569;
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+.how-to-use {
+    margin-top: 25px;
+}
+.how-to-use h3 {
+    color: #14B8A6;
+    margin-bottom: 15px;
+
+}
+
+.how-to-use ol {
+    padding-left: 25px;
+}
+
+.how-to-use li {
+    background-color: #F8FAFC;
+    color: #142B45;
+
+    padding: 10px;
+    margin-bottom: 10px;
+
+    border-left: 4px solid #2563EB;
+    border-radius: 8px;
+
+    font-size: 15px;
 }

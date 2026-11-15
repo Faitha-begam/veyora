@@ -10,7 +10,7 @@ import Register from './pages/Register'
 import Rideoption from './Sharedrideoption/Rideoption'
 
 import './App.css'
-import CardsDesign from './womenSafety/CardsDesign'
+import SafePlacesPage  from './womenSafety/SafePlacesPage'
 
 const App = () => {
   const location = useLocation()
@@ -29,7 +29,7 @@ const App = () => {
 
         <Route
           path="/safe-places"
-          element={<CardsDesign />}
+          element={<SafePlacesPage  />}
         />
 
         <Route
