@@ -1,7 +1,7 @@
 import { useState } from "react"
 import safePlacesByArea from "./SafePlaces"
 import CardsDesign from "./CardsDesign";
-const SearchBar = () => {
+const SearchBar = ({womenSafety}) => {
         const[search,setSearch]=useState("")
         const[searched,setSearched]=useState(false)
         const [safetyFilter, setSafetyFilter] = useState("All");
@@ -26,13 +26,17 @@ const SearchBar = () => {
     const handleSafetyFilter = (level) => {
     setSafetyFilter(level);
 };
-    const filteredPlaces = safetyFilter==="All"
-    ? places:places.filter((place) => place.safety === safetyFilter)
+   const filteredPlaces = womenSafety
+    ? places.filter((place) => place.safety === "High")
+    : safetyFilter === "All"
+        ? places
+        : places.filter((place) => place.safety === safetyFilter);
     
      
     
   return (
     <>
+
     <div className="search-section">
 
   <label htmlFor="location">
@@ -52,10 +56,8 @@ const SearchBar = () => {
     <option value="Guindy">Guindy</option>
   </select>
    
-    <button className="btn" onClick={handleFindPlaces}>Find Safe Places</button>
-     { searched && places.length === 0 && search !== "" && (
-  <p>No safe waiting places found for "{search}".</p>
-)}
+<button className="btn" onClick={handleFindPlaces}>Find Safe Places</button>
+    
 </div>
  <div className="safety-filter">
 
@@ -92,6 +94,28 @@ Public Places
 </button>
 
 </div>
+
+       {!searched && (
+  <div className="welcome-card">
+    <h2>Nearby Safe Waiting Places</h2>
+
+    <p className="welcome-text">
+      Find nearby safe locations where you can wait during late-night travel.
+    </p>
+
+    <div className="how-to-use">
+      <h3>How to Use</h3>
+
+      <ol>
+        <li>Select an area.</li>
+        <li>Click <strong>Find Safe Places</strong>.</li>
+        <li>Filter locations by safety level.</li>
+        <li>Click <strong>Why Safe?</strong> to know why the place is recommended.</li>
+      </ol>
+    </div>
+  </div>
+)}
+
   <div className="cards-container">
   {filteredPlaces.map((place)=>(
     <CardsDesign
@@ -99,7 +123,11 @@ Public Places
         place={place}
     />
   ))}
+
+
 </div>
+
+     
   
     
     </>
