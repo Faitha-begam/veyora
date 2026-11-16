@@ -1,8 +1,10 @@
 import { useState } from "react"
 import safePlacesByArea from "./SafePlaces"
-const SearchBar = () => {
-    const[search,setSearch]=useState("")
+import CardsDesign from "./CardsDesign";
+const SearchBar = ({womenSafety}) => {
+        const[search,setSearch]=useState("")
         const[searched,setSearched]=useState(false)
+        const [safetyFilter, setSafetyFilter] = useState("All");
 
     const[places,setPlaces]=useState([])
     const handleSearch=(e)=>{
@@ -21,44 +23,112 @@ const SearchBar = () => {
   }
 
     }
+    const handleSafetyFilter = (level) => {
+    setSafetyFilter(level);
+};
+   const filteredPlaces = womenSafety
+    ? places.filter((place) => place.safety === "High")
+    : safetyFilter === "All"
+        ? places
+        : places.filter((place) => place.safety === safetyFilter);
+    
      
     
   return (
     <>
-    <label htmlFor="location">Search Location: </label>
 
-<select
-  id="location"
-  value={search}
-  onChange={handleSearch}
+    <div className="search-section">
+
+  <label htmlFor="location">
+    Search Location:
+  </label>
+
+  <select
+  className="location-select"
+    id="location"
+    value={search}
+    onChange={handleSearch}
+  >
+    <option value="">Select an Area</option>
+    <option value="Ashok Pillar">Ashok Pillar</option>
+    <option value="Anna Nagar">Anna Nagar</option>
+    <option value="Koyambedu">Koyambedu</option>
+    <option value="Guindy">Guindy</option>
+  </select>
+   
+<button className="btn" onClick={handleFindPlaces}>Find Safe Places</button>
+    
+</div>
+ <div className="safety-filter">
+
+
+<p className="selected-filter">
+  Selected Filter: {safetyFilter}
+</p>
+
+<button className={safetyFilter === "All" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("All")}
 >
-  <option value="">Select an Area </option>
+All
+</button>
 
-  <option value="Ashok Pillar">Ashok Pillar</option>
 
-  <option value="Anna Nagar">Anna Nagar</option>
+<button  className={safetyFilter === "High" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("High")}
+>
+High Safety
+</button>
 
-  <option value="Koyambedu">Koyambedu</option>
 
-  <option value="Guindy">Guindy</option>
-</select>
-    <button onClick={handleFindPlaces}>Find Safe Places</button>
-     { searched && places.length === 0 && search !== "" && (
-  <p>No safe waiting places found for "{search}".</p>
+<button className={safetyFilter === "Medium" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("Medium")}
+>
+Medium Safety
+</button>
+
+
+<button  className={safetyFilter === "Public" ? "active-filter" : ""}
+onClick={()=>handleSafetyFilter("Public")}
+>
+Public Places
+</button>
+
+</div>
+
+       {!searched && (
+  <div className="welcome-card">
+    <h2>Nearby Safe Waiting Places</h2>
+
+    <p className="welcome-text">
+      Find nearby safe locations where you can wait during late-night travel.
+    </p>
+
+    <div className="how-to-use">
+      <h3>How to Use</h3>
+
+      <ol>
+        <li>Select an area.</li>
+        <li>Click <strong>Find Safe Places</strong>.</li>
+        <li>Filter locations by safety level.</li>
+        <li>Click <strong>Why Safe?</strong> to know why the place is recommended.</li>
+      </ol>
+    </div>
+  </div>
 )}
-    {places.map((e)=>(
-        <div key={e.id}>
-            <h3>Name: {e.name}</h3>
-            <h3>Category: {e.category}</h3>
-            <h3>Safety: {e.safety}</h3>
-            <h3>Distance: {e.distance}</h3>
-            <h3>Status: {e.status   }</h3>
-            <h3>rating: {e.rating}</h3>
-            <h3>reason: {e.reason}</h3>
-           
+
+  <div className="cards-container">
+  {filteredPlaces.map((place)=>(
+    <CardsDesign
+        key={place.id}
+        place={place}
+    />
+  ))}
+
+
+</div>
+
+     
   
-        </div>
-    ))}
     
     </>
   )
