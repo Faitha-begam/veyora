@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
-
-
-
+import Navbar from "../components/Navbar";
+import Field from "../components/Field"
 
 const validate = (values) => {
   const errors = {};
